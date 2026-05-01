@@ -4,6 +4,7 @@ import numpy as np
 from typing import Dict, Any, Optional
 import os
 import json
+from datetime import datetime
 from src.config import settings
 
 class Layer1AnomalyDetector:
@@ -45,36 +46,57 @@ class Layer1AnomalyDetector:
 
     def _extract_features(self, claim_data: Dict[str, Any]) -> pd.DataFrame:
         """
-        Extracts and prepares features in the exact format the model was trained on.
+        Extracts features prioritizing the 6 core signals: 
+        Provider_ID, Claim_Amount, Procedure_Code, Diagnosis_Code, Patient_Age, Patient_Gender.
         """
-        # Mapping incoming ClaimBridge fields to Kaggle dataset fields
-        # MUST MATCH TRAINING FEATURE ORDER EXACTLY:
-        # ['Provider_ID', 'Patient_Age', 'Patient_Gender', 'Diagnosis_Code', 'Procedure_Code', 
-        #  'Claim_Amount', 'Approved_Amount', 'Insurance_Type', 'Days_Between_Service_and_Claim', 
-        #  'Number_of_Claims_Per_Provider_Monthly', 'Provider_Specialty', 'Patient_State', 
-        #  'Claim_Status', 'Length_of_Stay', 'Visit_Type', 'Chronic_Condition_Flag', 
-        #  'Prior_Visits_12m', 'Submission_Month', 'Submission_DayOfWeek']
-        
-        data = {
-            "Provider_ID": hash(str(claim_data.get("provider_id", "P0000"))) % 1000,
-            "Patient_Age": float(claim_data.get("patient_age", 45)),
-            "Patient_Gender": hash(str(claim_data.get("gender", "M"))) % 2,
-            "Diagnosis_Code": hash(str(claim_data.get("diagnosis", "Unknown"))) % 1000,
+        # Core 6 features (Critical)
+        core_data = {
+            "Provider_ID": hash(str(claim_data.get("provider_id", "Unknown"))) % 1000,
+            "Claim_Amount": float(claim_data.get("total_amount", 0.0)),
             "Procedure_Code": hash(str(claim_data.get("procedure", "Unknown"))) % 1000,
-            "Claim_Amount": float(claim_data.get("total_amount", 0)),
-            "Approved_Amount": float(claim_data.get("approved_amount", 0)),
-            "Insurance_Type": hash(str(claim_data.get("insurance", "Private"))) % 4,
+            "Diagnosis_Code": hash(str(claim_data.get("diagnosis", "Unknown"))) % 1000,
+            "Patient_Age": float(claim_data.get("patient_age", 45.0)),
+            "Patient_Gender": hash(str(claim_data.get("gender", "U"))) % 2,
+        }
+
+        # Secondary 13 features (Imputed if missing)
+        secondary_data = {
+            "Approved_Amount": float(claim_data.get("approved_amount", core_data["Claim_Amount"] * 0.9)),
+            "Insurance_Type": hash(str(claim_data.get("insurance", "Other"))) % 4,
             "Days_Between_Service_and_Claim": int(claim_data.get("days_since_service", 10)),
             "Number_of_Claims_Per_Provider_Monthly": int(claim_data.get("provider_monthly_volume", 50)),
-            "Provider_Specialty": hash(str(claim_data.get("specialty", "General"))) % 20,
-            "Patient_State": hash(str(claim_data.get("state", "NY"))) % 50,
-            "Claim_Status": 1, # Approved
+            "Provider_Specialty": hash(str(claim_data.get("specialty", "Unknown"))) % 20,
+            "Patient_State": hash(str(claim_data.get("state", "Unknown"))) % 50,
+            "Claim_Status": 1,
             "Length_of_Stay": int(claim_data.get("stay_length", 0)),
-            "Visit_Type": hash(str(claim_data.get("visit_type", "Outpatient"))) % 3,
+            "Visit_Type": hash(str(claim_data.get("visit_type", "Unknown"))) % 3,
             "Chronic_Condition_Flag": 1 if claim_data.get("has_chronic", False) else 0,
-            "Prior_Visits_12m": int(claim_data.get("prior_visits", 0)),
-            "Submission_Month": 5, # May
-            "Submission_DayOfWeek": 1 # Monday
+            "Prior_Visits_12m": int(claim_data.get("prior_visits", 2)),
+            "Submission_Month": datetime.now().month,
+            "Submission_DayOfWeek": datetime.now().weekday()
+        }
+        
+        # Merge into the exact 19-feature order expected by the model
+        data = {
+            "Provider_ID": core_data["Provider_ID"],
+            "Patient_Age": core_data["Patient_Age"],
+            "Patient_Gender": core_data["Patient_Gender"],
+            "Diagnosis_Code": core_data["Diagnosis_Code"],
+            "Procedure_Code": core_data["Procedure_Code"],
+            "Claim_Amount": core_data["Claim_Amount"],
+            "Approved_Amount": secondary_data["Approved_Amount"],
+            "Insurance_Type": secondary_data["Insurance_Type"],
+            "Days_Between_Service_and_Claim": secondary_data["Days_Between_Service_and_Claim"],
+            "Number_of_Claims_Per_Provider_Monthly": secondary_data["Number_of_Claims_Per_Provider_Monthly"],
+            "Provider_Specialty": secondary_data["Provider_Specialty"],
+            "Patient_State": secondary_data["Patient_State"],
+            "Claim_Status": secondary_data["Claim_Status"],
+            "Length_of_Stay": secondary_data["Length_of_Stay"],
+            "Visit_Type": secondary_data["Visit_Type"],
+            "Chronic_Condition_Flag": secondary_data["Chronic_Condition_Flag"],
+            "Prior_Visits_12m": secondary_data["Prior_Visits_12m"],
+            "Submission_Month": secondary_data["Submission_Month"],
+            "Submission_DayOfWeek": secondary_data["Submission_DayOfWeek"]
         }
         
         return pd.DataFrame([data])
@@ -86,5 +108,13 @@ class Layer1AnomalyDetector:
         return 0.1
 
     def _calculate_confidence(self, score: float, claim_data: Dict[str, Any]) -> float:
-        # Confidence is high if we have a real model and enough data
-        return 0.92 if self.model else 0.5
+        """
+        Confidence is weighted heavily towards the 6 core features.
+        """
+        core_fields = ["total_amount", "provider_id", "diagnosis", "procedure", "patient_age", "gender"]
+        provided_core = sum(1 for field in core_fields if field in claim_data and claim_data[field] is not None)
+        
+        # If any core feature is missing, confidence drops sharply
+        core_completeness = provided_core / len(core_fields)
+        
+        return round(0.95 * core_completeness, 2)
