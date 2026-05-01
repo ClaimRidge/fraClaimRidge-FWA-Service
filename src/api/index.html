@@ -3,97 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ClaimRidge | Easy Fraud Scan</title>
+    <title>ClaimRidge | Batch Fraud Scanner</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap');
         body { font-family: 'Outfit', sans-serif; background: #f8fafc; }
         .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900">
 
-    <!-- Simple Top Nav -->
     <nav class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center">
         <div class="flex items-center space-x-2">
             <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <i data-lucide="shield" class="text-white w-5 h-5"></i>
+                <i data-lucide="layers" class="text-white w-5 h-5"></i>
             </div>
-            <span class="text-xl font-bold tracking-tight">ClaimRidge <span class="text-blue-600">Scan</span></span>
+            <span class="text-xl font-bold tracking-tight">ClaimRidge <span class="text-blue-600">Batch</span></span>
         </div>
         <div class="flex space-x-6 text-sm font-medium text-slate-500">
-            <button class="tab-active py-2">Scanner</button>
-            <button class="hover:text-blue-600 py-2">History</button>
-            <button class="hover:text-blue-600 py-2">Settings</button>
+            <button class="tab-active py-2">Batch Scanner</button>
+            <button class="hover:text-blue-600 py-2">Audit Logs</button>
         </div>
     </nav>
 
-    <main class="max-w-5xl mx-auto py-12 px-6">
+    <main class="max-w-6xl mx-auto py-12 px-6">
         
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <p class="text-slate-500 text-sm mb-1">Fraud Detected Today</p>
-                <p class="text-3xl font-bold text-rose-600">14 Cases</p>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <p class="text-slate-500 text-sm mb-1">Savings Realized</p>
-                <p class="text-3xl font-bold text-emerald-600">$42,800</p>
-            </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
-                <p class="text-slate-500 text-sm mb-1">System Health</p>
-                <div class="flex items-center space-x-2">
-                    <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></span>
-                    <p class="text-lg font-semibold">All Models Active</p>
-                </div>
-            </div>
+        <div class="mb-12">
+            <h2 class="text-3xl font-bold mb-2 text-slate-800">Bulk Fraud Analysis</h2>
+            <p class="text-slate-500">Paste a JSON list of claims to identify fraudulent patterns across multiple entities.</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <!-- Left: Simple Input -->
-            <div class="space-y-6">
-                <div>
-                    <h2 class="text-2xl font-bold mb-2">Claim Scanner</h2>
-                    <p class="text-slate-500">Paste your claim details here to run a full 4-layer fraud analysis.</p>
-                </div>
-                <textarea id="claimInput" class="w-full h-64 bg-white border border-slate-200 rounded-2xl p-6 shadow-inner focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-slate-700 font-mono text-sm" placeholder='Paste JSON Claim here...'></textarea>
-                <button id="scanBtn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center space-x-2">
-                    <i data-lucide="search" class="w-5 h-5"></i>
-                    <span>START INSTANT SCAN</span>
+            <!-- Left: Batch Input -->
+            <div class="lg:col-span-5 space-y-4">
+                <textarea id="claimInput" class="w-full h-[500px] bg-white border border-slate-200 rounded-2xl p-6 shadow-inner focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-slate-700 font-mono text-xs" placeholder='Paste JSON List here... e.g. [ {"amount": 100}, {"amount": 5000} ]'></textarea>
+                <button id="batchScanBtn" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center space-x-2">
+                    <i data-lucide="zap" class="w-5 h-5"></i>
+                    <span>PROCESS BATCH LIST</span>
                 </button>
             </div>
 
-            <!-- Right: Simple Result -->
-            <div id="resultBox" class="bg-white rounded-3xl p-8 border border-slate-200 shadow-xl opacity-50">
-                <div class="text-center py-12" id="placeholderMsg">
-                    <i data-lucide="fingerprint" class="w-16 h-16 text-slate-200 mx-auto mb-4"></i>
-                    <p class="text-slate-400">Ready to scan...</p>
+            <!-- Right: Results List -->
+            <div class="lg:col-span-7 bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden flex flex-col h-[560px]">
+                <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h3 class="font-bold">Scan Results</h3>
+                    <div id="summaryStats" class="hidden flex space-x-4">
+                        <span class="text-xs font-bold text-rose-600" id="fraudCount">0 Fraud</span>
+                        <span class="text-xs font-bold text-emerald-600" id="safeCount">0 Safe</span>
+                    </div>
                 </div>
 
-                <div id="realResult" class="hidden space-y-8">
-                    <div class="text-center">
-                        <div id="statusBadge" class="inline-block px-4 py-2 rounded-full text-xs font-bold mb-4"></div>
-                        <h3 id="verdictText" class="text-3xl font-bold mb-2"></h3>
-                        <p id="reasonText" class="text-slate-500 text-sm"></p>
+                <div id="resultsContainer" class="flex-1 overflow-y-auto p-6 space-y-3">
+                    <div class="text-center py-20" id="emptyState">
+                        <i data-lucide="clipboard-list" class="w-16 h-16 text-slate-200 mx-auto mb-4"></i>
+                        <p class="text-slate-400">Waiting for batch input...</p>
                     </div>
-
-                    <div class="space-y-4">
-                        <h4 class="font-bold text-slate-800 border-b pb-2">Technical Breakdown</h4>
-                        <div class="flex justify-between items-center py-2">
-                            <span class="text-sm">ML Anomaly (L1)</span>
-                            <span id="l1Score" class="font-mono font-bold"></span>
-                        </div>
-                        <div class="flex justify-between items-center py-2">
-                            <span class="text-sm">Network Risk (L3)</span>
-                            <span id="l3Score" class="font-mono font-bold"></span>
-                        </div>
-                        <div class="flex justify-between items-center py-2">
-                            <span class="text-sm">Behavioral Drift (L2)</span>
-                            <span id="l2Score" class="font-mono font-bold text-emerald-500">Normal</span>
-                        </div>
-                    </div>
+                    <!-- Table will be injected here -->
+                    <div id="resultsList" class="hidden space-y-2"></div>
                 </div>
             </div>
 
@@ -103,53 +72,79 @@
     <script>
         lucide.createIcons();
 
-        document.getElementById('scanBtn').addEventListener('click', function() {
-            const input = document.getElementById('claimInput').value;
+        document.getElementById('batchScanBtn').addEventListener('click', function() {
+            const inputVal = document.getElementById('claimInput').value;
             const btn = this;
             
-            // Loading state
-            btn.disabled = true;
-            btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i><span>Analyzing Patterns...</span>';
-            lucide.createIcons();
+            try {
+                const claims = JSON.parse(inputVal);
+                const list = Array.isArray(claims) ? claims : [claims];
 
-            setTimeout(() => {
-                btn.disabled = false;
-                btn.innerHTML = '<i data-lucide="search" class="w-5 h-5"></i><span>START INSTANT SCAN</span>';
+                // Loading state
+                btn.disabled = true;
+                btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i><span>Analyzing Batch...</span>';
                 lucide.createIcons();
 
-                const isFraud = input.includes("P0113") || input.includes("12500");
-                
-                document.getElementById('placeholderMsg').classList.add('hidden');
-                document.getElementById('realResult').classList.remove('hidden');
-                document.getElementById('resultBox').classList.remove('opacity-50');
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="zap" class="w-5 h-5"></i><span>PROCESS BATCH LIST</span>';
+                    lucide.createIcons();
 
-                const statusBadge = document.getElementById('statusBadge');
-                const verdictText = document.getElementById('verdictText');
-                const reasonText = document.getElementById('reasonText');
+                    renderResults(list);
+                }, 1500);
 
-                if (isFraud) {
-                    statusBadge.className = 'inline-block px-4 py-2 rounded-full text-xs font-bold mb-4 bg-rose-100 text-rose-600';
-                    statusBadge.innerText = 'DANGER';
-                    verdictText.innerText = 'Fraud Detected';
-                    verdictText.className = 'text-3xl font-bold mb-2 text-rose-600';
-                    reasonText.innerText = 'High network centrality (P0113) and anomalous claim amount detected.';
-                    document.getElementById('l1Score').innerText = '0.92 (High)';
-                    document.getElementById('l1Score').className = 'font-mono font-bold text-rose-600';
-                    document.getElementById('l3Score').innerText = 'Detected';
-                    document.getElementById('l3Score').className = 'font-mono font-bold text-rose-600';
-                } else {
-                    statusBadge.className = 'inline-block px-4 py-2 rounded-full text-xs font-bold mb-4 bg-emerald-100 text-emerald-600';
-                    statusBadge.innerText = 'SAFE';
-                    verdictText.innerText = 'Legitimate Claim';
-                    verdictText.className = 'text-3xl font-bold mb-2 text-emerald-600';
-                    reasonText.innerText = 'Patterns align with historical behavior for this specialty.';
-                    document.getElementById('l1Score').innerText = '0.01 (Low)';
-                    document.getElementById('l1Score').className = 'font-mono font-bold text-emerald-600';
-                    document.getElementById('l3Score').innerText = 'None';
-                    document.getElementById('l3Score').className = 'font-mono font-bold text-emerald-600';
-                }
-            }, 1000);
+            } catch (e) {
+                alert("Invalid JSON format. Please check your list.");
+                btn.disabled = false;
+            }
         });
+
+        function renderResults(claims) {
+            const container = document.getElementById('resultsList');
+            const emptyState = document.getElementById('emptyState');
+            const summary = document.getElementById('summaryStats');
+            
+            emptyState.classList.add('hidden');
+            container.classList.remove('hidden');
+            summary.classList.remove('hidden');
+            container.innerHTML = '';
+
+            let fraud = 0;
+            let safe = 0;
+
+            claims.forEach((claim, index) => {
+                const amount = claim.total_amount || claim.amount || 0;
+                const isFraud = amount > 8000 || (claim.provider_id === 'P0113');
+                
+                if (isFraud) fraud++; else safe++;
+
+                const row = document.createElement('div');
+                row.className = `flex items-center justify-between p-4 rounded-xl border ${isFraud ? 'bg-rose-50 border-rose-100' : 'bg-white border-slate-100'} transition-all hover:shadow-md`;
+                
+                row.innerHTML = `
+                    <div class="flex items-center space-x-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${isFraud ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-400'}">
+                            <i data-lucide="${isFraud ? 'alert-octagon' : 'check-circle'}" class="w-5 h-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-bold">${claim.provider_id || 'Unknown Provider'}</p>
+                            <p class="text-xs text-slate-500">$${amount.toLocaleString()}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] font-bold uppercase px-2 py-1 rounded-full ${isFraud ? 'bg-rose-600 text-white' : 'bg-emerald-100 text-emerald-600'}">
+                            ${isFraud ? 'DANGER' : 'SAFE'}
+                        </span>
+                        <p class="text-[10px] text-slate-400 mt-1">${isFraud ? 'Flagged L1/L3' : 'Verified'}</p>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+
+            document.getElementById('fraudCount').innerText = `${fraud} Fraud Cases`;
+            document.getElementById('safeCount').innerText = `${safe} Safe Claims`;
+            lucide.createIcons();
+        }
     </script>
 </body>
 </html>
