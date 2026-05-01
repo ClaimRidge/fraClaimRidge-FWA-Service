@@ -46,11 +46,9 @@ class Layer1AnomalyDetector:
 
     def _extract_features(self, claim_data: Dict[str, Any]) -> pd.DataFrame:
         """
-        Extracts features prioritizing the 6 core signals: 
-        Provider_ID, Claim_Amount, Procedure_Code, Diagnosis_Code, Patient_Age, Patient_Gender.
+        Extracts ONLY the 6 core features that the model was trained on.
         """
-        # Core 6 features (Critical)
-        core_data = {
+        data = {
             "Provider_ID": hash(str(claim_data.get("provider_id", "Unknown"))) % 1000,
             "Claim_Amount": float(claim_data.get("total_amount", 0.0)),
             "Procedure_Code": hash(str(claim_data.get("procedure", "Unknown"))) % 1000,
@@ -58,48 +56,11 @@ class Layer1AnomalyDetector:
             "Patient_Age": float(claim_data.get("patient_age", 45.0)),
             "Patient_Gender": hash(str(claim_data.get("gender", "U"))) % 2,
         }
-
-        # Secondary 13 features (Imputed if missing)
-        secondary_data = {
-            "Approved_Amount": float(claim_data.get("approved_amount", core_data["Claim_Amount"] * 0.9)),
-            "Insurance_Type": hash(str(claim_data.get("insurance", "Other"))) % 4,
-            "Days_Between_Service_and_Claim": int(claim_data.get("days_since_service", 10)),
-            "Number_of_Claims_Per_Provider_Monthly": int(claim_data.get("provider_monthly_volume", 50)),
-            "Provider_Specialty": hash(str(claim_data.get("specialty", "Unknown"))) % 20,
-            "Patient_State": hash(str(claim_data.get("state", "Unknown"))) % 50,
-            "Claim_Status": 1,
-            "Length_of_Stay": int(claim_data.get("stay_length", 0)),
-            "Visit_Type": hash(str(claim_data.get("visit_type", "Unknown"))) % 3,
-            "Chronic_Condition_Flag": 1 if claim_data.get("has_chronic", False) else 0,
-            "Prior_Visits_12m": int(claim_data.get("prior_visits", 2)),
-            "Submission_Month": datetime.now().month,
-            "Submission_DayOfWeek": datetime.now().weekday()
-        }
         
-        # Merge into the exact 19-feature order expected by the model
-        data = {
-            "Provider_ID": core_data["Provider_ID"],
-            "Patient_Age": core_data["Patient_Age"],
-            "Patient_Gender": core_data["Patient_Gender"],
-            "Diagnosis_Code": core_data["Diagnosis_Code"],
-            "Procedure_Code": core_data["Procedure_Code"],
-            "Claim_Amount": core_data["Claim_Amount"],
-            "Approved_Amount": secondary_data["Approved_Amount"],
-            "Insurance_Type": secondary_data["Insurance_Type"],
-            "Days_Between_Service_and_Claim": secondary_data["Days_Between_Service_and_Claim"],
-            "Number_of_Claims_Per_Provider_Monthly": secondary_data["Number_of_Claims_Per_Provider_Monthly"],
-            "Provider_Specialty": secondary_data["Provider_Specialty"],
-            "Patient_State": secondary_data["Patient_State"],
-            "Claim_Status": secondary_data["Claim_Status"],
-            "Length_of_Stay": secondary_data["Length_of_Stay"],
-            "Visit_Type": secondary_data["Visit_Type"],
-            "Chronic_Condition_Flag": secondary_data["Chronic_Condition_Flag"],
-            "Prior_Visits_12m": secondary_data["Prior_Visits_12m"],
-            "Submission_Month": secondary_data["Submission_Month"],
-            "Submission_DayOfWeek": secondary_data["Submission_DayOfWeek"]
-        }
-        
-        return pd.DataFrame([data])
+        # Order MUST match the training feature set
+        feature_order = ['Provider_ID', 'Claim_Amount', 'Procedure_Code', 'Diagnosis_Code', 'Patient_Age', 'Patient_Gender']
+        df = pd.DataFrame([data])
+        return df[feature_order]
 
     def _run_heuristics(self, claim_data: Dict[str, Any]) -> float:
         amount = float(claim_data.get("total_amount", 0))
@@ -109,12 +70,9 @@ class Layer1AnomalyDetector:
 
     def _calculate_confidence(self, score: float, claim_data: Dict[str, Any]) -> float:
         """
-        Confidence is weighted heavily towards the 6 core features.
+        Confidence is based on the presence of the 6 core features.
         """
         core_fields = ["total_amount", "provider_id", "diagnosis", "procedure", "patient_age", "gender"]
         provided_core = sum(1 for field in core_fields if field in claim_data and claim_data[field] is not None)
         
-        # If any core feature is missing, confidence drops sharply
-        core_completeness = provided_core / len(core_fields)
-        
-        return round(0.95 * core_completeness, 2)
+        return round(0.98 * (provided_core / len(core_fields)), 2)
