@@ -12,15 +12,14 @@ class Layer1AnomalyDetector:
         self.threshold = settings.L1_ANOMALY_THRESHOLD
 
     def _load_model(self, model_path: Optional[str]):
-        # In a real production app, this would fetch from MLflow
-        # For now, we load a local stub or initialize a dummy
-        if model_path and os.path.exists(model_path):
+        # Default to the .xgb champion model if no path provided
+        path = model_path or "models/fixtures/layer1_anomaly_v1.xgb"
+        
+        if os.path.exists(path):
             model = xgb.XGBClassifier()
-            model.load_model(model_path)
+            model.load_model(path)
             return model
-        else:
-            # Fallback/Dummy logic for demonstration
-            return None
+        return None
 
     async def predict(self, claim_data: Dict[str, Any]) -> Dict[str, Any]:
         """

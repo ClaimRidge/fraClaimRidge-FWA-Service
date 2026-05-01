@@ -9,7 +9,7 @@ import json
 
 # Paths
 DATA_PATH = r"C:\Users\dell\.cache\kagglehub\datasets\nudratabbas\healthcare-fraud-detection-dataset\versions\1\healthcare_fraud_detection.csv"
-MODEL_OUTPUT_PATH = r"c:\Users\dell\OneDrive\Bureau\claimbridge\services\fwa-svc\models\fixtures\layer1_anomaly_v1.json"
+MODEL_OUTPUT_PATH = r"c:\Users\dell\OneDrive\Bureau\claimbridge\services\fwa-svc\models\fixtures\layer1_anomaly_v1.xgb"
 METRICS_OUTPUT_PATH = r"c:\Users\dell\OneDrive\Bureau\claimbridge\services\fwa-svc\models\fixtures\layer1_metrics.json"
 
 def train_model():
